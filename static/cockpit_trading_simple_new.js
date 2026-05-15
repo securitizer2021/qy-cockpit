@@ -130,7 +130,21 @@
   }
 
   function nGet(h, sym) {
-    return Number(state.netByH?.[sym]?.[h] || 0);
+
+    // OPEN LONG exposure
+    const longOpen =
+      state.viewMode === "position"
+        ? ctGet(h, sym, "L", "OPEN")
+        : cGet(h, sym, "L", "OPEN");
+
+    // OPEN SHORT exposure
+    const shortOpen =
+      state.viewMode === "position"
+        ? ctGet(h, sym, "S", "OPEN")
+        : cGet(h, sym, "S", "OPEN");
+
+    // Net exposure
+    return Number(longOpen) - Number(shortOpen);
   }
 
   function vGet(h, sym, bucket, status) {
@@ -198,8 +212,8 @@
           <td>${h}</td>
           <td>${fmtNum(getVal("T","OPEN"))}</td>
           <td>${fmtNum(getVal("T","CLOSED"))}</td>
-          <td>${fmtNum(getVal("L","OPEN") + getVal("L","CLOSED"))}</td>
-          <td>${fmtNum(getVal("S","OPEN") + getVal("S","CLOSED"))}</td>
+          <td>${fmtNum(getVal("L","OPEN"))}</td>
+          <td>${fmtNum(getVal("S","OPEN"))}</td>
           <td>${fmtSigned(nGet(h,sym))}</td>
           <td>${fmtNum(pGet(h,sym,"T",measure),2)}</td>
           <td>${fmtNum(pGet(h,sym,"L",measure),2)}</td>
