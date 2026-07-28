@@ -209,6 +209,197 @@
 
 </div>
 
+<script src="/static/cockpit_trading_simple_new.js?v=FINAL_COMBINED_V016"></script>
+
+</body>
+</html>
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .muted { color:#666; font-size:12px; }
+    .small { font-size:12px; }
+
+    table { width:100%; border-collapse:collapse; table-layout: fixed; }
+
+    th, td {
+      border:1px solid #e5e5e5;
+      padding:8px 10px;
+      font-size:13px;
+    }
+
+    th {
+      background:#fafafa;
+      text-align:center;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    td.num {
+      text-align:right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pill {
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid #e5e5e5;
+      font-size:12px;
+    }
+
+    .tableWrap { overflow:auto; max-height:520px; }
+
+    /* 🔥 NEW: empty state styling */
+    .emptyState {
+      text-align:center;
+      padding:20px;
+      color:#999;
+      font-size:13px;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- ===================== TOP ===================== -->
+<div class="stickyBar">
+  <div class="card">
+    <div class="row">
+
+      <div>
+        <strong>Cockpit Live Stats</strong>
+        <div class="muted">Single Symbol | Counts + PnL Combined</div>
+      </div>
+
+      <div class="pill" id="todayPill">TODAY: —</div>
+      <div class="pill" id="tsPill">Last updated: —</div>
+
+      <div style="flex:1"></div>
+
+      <span class="muted">Symbol</span>
+      <select id="symbolSelect">
+        <option value="ES" selected>ES</option>
+      </select>
+
+      <span class="muted">Mode</span>
+      <select id="modeSelect">
+        <option value="audit">Audit</option>
+        <option value="live" selected>Live</option>
+        <option value="worker">Worker</option>
+      </select>
+
+      <span class="muted">Refresh</span>
+      <select id="refreshSelect">
+        <option value="2000">2s</option>
+        <option value="5000" selected>5s</option>
+        <option value="10000">10s</option>
+      </select>
+
+      <button id="refreshAllBtn">Refresh</button>
+    </div>
+  </div>
+</div>
+
+<div class="col" style="margin-top:12px;">
+
+  <!-- ===================== HEALTH ===================== -->
+  <div class="card">
+    <h3 class="sectionTitle">Health</h3>
+    <div class="tableWrap" style="max-height:260px;">
+      <table id="healthTable"></table>
+    </div>
+  </div>
+
+  <!-- ===================== COMBINED ===================== -->
+  <div class="card">
+
+    <div class="row" style="justify-content:space-between;">
+      <div>
+        <h3 class="sectionTitle">TODAY — Counts + PnL</h3>
+        <div class="muted">Unified horizon view</div>
+      </div>
+      <div class="pill" id="combinedTsPill">Updated: —</div>
+    </div>
+
+    <div class="filtersBar" style="margin-top:10px;">
+      <label class="muted small">PnL Measure</label>
+      <select id="pnlMeasure">
+        <option value="TOTAL" selected>Total</option>
+        <option value="REALIZED">Realized</option>
+        <option value="UNREALIZED">Unrealized</option>
+      </select>
+
+      <label class="muted small">View</label>
+      <select id="viewMode">
+        <option value="trades" selected>Trades</option>
+        <option value="position">Position</option>
+      </select>
+
+
+      <button id="applyBtn">Apply</button>
+
+      <div class="spacer"></div>
+
+      <button id="hAllBtn" class="small">All</button>
+      <button id="hNoneBtn" class="small">None</button>
+
+      <span class="muted small">Horizons</span>
+    </div>
+
+    <div id="horizonsBox" class="hlist" style="margin-top:8px;"></div>
+
+    <div class="tableWrap" style="margin-top:10px;">
+      <table id="combinedTable"></table>
+    </div>
+
+  </div>
+
+  <!-- ===================== 🔥 PREDICTION STATS ===================== -->
+  <div class="card">
+
+    <div class="row" style="justify-content:space-between;">
+      <div>
+        <h3 class="sectionTitle">Prediction Stats</h3>
+        <div class="muted">Raw + Z-score based signals</div>
+      </div>
+
+      <div class="row">
+        <span class="muted small">Session</span>
+        <select id="sessionSelect">
+          <option value="FULL" selected>FULL</option>
+          <option value="RTH">RTH</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- 🔥 IMPORTANT: default placeholder -->
+    <div class="tableWrap" style="margin-top:10px;">
+      <table id="predictionTable">
+        <tbody>
+          <tr>
+            <td class="emptyState">Waiting for data...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ===================== DEBUG ===================== -->
+  <div class="card">
+    <h3 class="sectionTitle">Debug</h3>
+
+    <div class="row">
+      <button id="dbgClearBtn">Clear Logs</button>
+      <button id="dbgCopyBtn">Copy Logs</button>
+      <span class="muted small" id="dbgMeta">—</span>
+    </div>
+
+    <pre id="dbgLog" style="max-height:300px; overflow:auto;"></pre>
+  </div>
+
+</div>
+
 <script src="/static/cockpit_trading_simple_new.js?v=FINAL_COMBINED_V010"></script>
 
 </body>
