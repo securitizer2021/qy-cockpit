@@ -238,48 +238,108 @@
   // HEALTH
   // =========================
   function renderHealth(data) {
-    const rows = Array.isArray(data?.health) ? data.health : [];
-    const sym = getSymbol();
-
-    const filtered = rows.filter(r =>
-      String(r.symbol).toUpperCase() === sym
-    );
 
     const predSummary = window.__predSummary || {};
     const session = el.sessionSelect?.value || "FULL";
 
     const feeds = ["HFT","IDT"];
 
-    const body = feeds.map(feed => {
+    function detectMode(ts) {
 
-      const r = filtered.find(x => (x.feed || "").toUpperCase() === feed) || {};
-      const rs = r.run_state || {};
+      if (!ts) return "UNKNOWN";
+
+      try {
+
+        const d = new Date(ts);
+        const now = new Date();
+
+        const sameDay =
+          d.getUTCFullYear() === now.getUTCFullYear() &&
+          d.getUTCMonth() === now.getUTCMonth() &&
+          d.getUTCDate() === now.getUTCDate();
+
+        return sameDay ? "LIVE" : "SIMULATION";
+
+      } catch(e) {
+
+        return "UNKNOWN";
+      }
+    }
+
+    function extractDate(ts) {
+
+      if (!ts) return "-";
+
+      try {
+
+        const d = new Date(ts);
+
+        return (
+          d.getUTCFullYear() + "-" +
+          String(d.getUTCMonth() + 1).padStart(2,"0") + "-" +
+          String(d.getUTCDate()).padStart(2,"0")
+        );
+
+      } catch(e) {
+
+        return "-";
+      }
+    }
+
+    const body = feeds.map(feed => {
 
       const pred =
         predSummary?.[session]?.[feed] ||
         predSummary?.["FULL"]?.[feed] ||
         {};
 
+      // =====================================
+      // TRUE STREAM SOURCE = INFERENCE CSV
+      // =====================================
+      const firstTs =
+        pred.first_ts_et ||
+        pred.first_ts ||
+        "-";
+
+      const lastTs =
+        pred.last_ts_et ||
+        pred.last_ts ||
+        "-";
+
+      const rows = pred.rows ?? "-";
+
+      const modeLabel = detectMode(lastTs);
+      const runDate = extractDate(lastTs);
+
       return `
         <tr>
+
           <td>
-            <strong>${feed}</strong><br>
-            ts: ${rs.last_ts_iso_utc ?? "-"}<br>
-            Mid: ${rs.last_mid ?? "-"}<br>
-            Upd: ${rs.updated_at_utc ?? "-"}
+            <strong>${feed} (Inference Stream)</strong><br>
+            Source: prediction CSV<br>
+            Refresh: ${new Date().toLocaleTimeString()}
           </td>
+
           <td>
-            <strong>${feed} (Prediction)</strong><br>
-            First: ${pred.first_ts_et || "-"}<br>
-            Last: ${pred.last_ts_et || "-"}<br>
-            Rows: ${pred.rows ?? "-"}
+            <strong>${feed} (${modeLabel})</strong><br>
+            Run Date: ${runDate}<br>
+            First TS: ${firstTs}<br>
+            Last TS: ${lastTs}<br>
+            Rows: ${rows}
           </td>
+
         </tr>
       `;
+
     }).join("");
 
     el.healthTable.innerHTML = `
-      <thead><tr><th>Engine</th><th>Prediction</th></tr></thead>
+      <thead>
+        <tr>
+          <th>Stream Status</th>
+          <th>Inference Dataset</th>
+        </tr>
+      </thead>
       <tbody>${body}</tbody>
     `;
   }
@@ -417,7 +477,47 @@
       renderHealth(data);
       renderPredictionStats(pred);
 
-      el.todayPill.textContent = `TODAY: ${data.meta.trading_date}`;
+      const predSummary = window.__predSummary || {};
+
+      const hft =
+        predSummary?.FULL?.HFT ||
+        {};
+
+      const idt =
+        predSummary?.FULL?.IDT ||
+        {};
+
+      const anchorTs =
+        hft.last_ts_et ||
+        idt.last_ts_et ||
+        hft.last_ts ||
+        idt.last_ts ||
+        null;
+
+      if (anchorTs) {
+
+        try {
+
+          const d = new Date(anchorTs);
+
+          const ymd =
+            d.getUTCFullYear() +
+            String(d.getUTCMonth() + 1).padStart(2, "0") +
+            String(d.getUTCDate()).padStart(2, "0");
+
+          el.todayPill.textContent = `RUN DATE: ${ymd}`;
+
+        } catch(e) {
+
+          el.todayPill.textContent =
+            `RUN DATE: ${data.meta.trading_date || "-"}`;
+        }
+
+      } else {
+
+        el.todayPill.textContent =
+          `RUN DATE: ${data.meta.trading_date || "-"}`;
+      }
       el.tsPill.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
 
       log("refresh OK");
