@@ -69,7 +69,9 @@
     netByH: {},
     logs: [],
     timer: null,
-    _initializedHorizons: false
+    _initializedHorizons: false,
+    activeSymbol: null,
+    refreshSeq: 0
   };
   window.__state = state;
 
@@ -242,7 +244,13 @@
     const predSummary = window.__predSummary || {};
     const session = el.sessionSelect?.value || "FULL";
 
-    const feeds = ["HFT","IDT"];
+    const feeds = ["HFT","IDT"].filter(feed => {
+      const summary =
+        predSummary?.[session]?.[feed] ||
+        predSummary?.["FULL"]?.[feed] ||
+        {};
+      return Number(summary.rows || 0) > 0 || summary.first_ts_et || summary.last_ts_et;
+    });
 
     function detectMode(ts) {
 
@@ -444,10 +452,26 @@
   // =========================
   // FETCH
   // =========================
-  async function fetchPredictionStats() {
-    const res = await fetch(`${apiBase(getMode())}/cockpit/prediction_stats?symbol=${getSymbol()}`);
+  async function fetchPredictionStats(symbol) {
+    const res = await fetch(`${apiBase(getMode())}/cockpit/prediction_stats?symbol=${symbol}`);
     if (!res.ok) return null;
     return await res.json();
+  }
+
+  function predictionHorizons(pred) {
+    const found = new Set();
+    const stats = pred?.prediction_stats || {};
+
+    for (const session of Object.values(stats)) {
+      for (const model of Object.values(session || {})) {
+        for (const h of Object.keys(model || {})) {
+          const n = Number(h);
+          if (Number.isFinite(n)) found.add(n);
+        }
+      }
+    }
+
+    return Array.from(found).sort((a, b) => a - b);
   }
 
   // =========================
@@ -455,16 +479,33 @@
   // =========================
   async function refreshAll() {
     try {
+      const symbol = getSymbol();
+      const requestSeq = ++state.refreshSeq;
 
-      const res = await fetch(`${snapshotPath(getMode())}?symbols=${getSymbol()}`);
+      const res = await fetch(`${snapshotPath(getMode())}?symbols=${symbol}`);
+      if (!res.ok) throw new Error(`Snapshot HTTP ${res.status} for ${symbol}`);
       const data = await res.json();
 
-      const pred = await fetchPredictionStats();
+      const pred = await fetchPredictionStats(symbol);
+
+      // Ignore an older response if the user changed symbols or a newer
+      // refresh started while these requests were in flight.
+      if (symbol !== getSymbol() || requestSeq !== state.refreshSeq) return;
+
+      if (state.activeSymbol !== symbol) {
+        state.activeSymbol = symbol;
+      }
 
       window.__lastPredictionData = pred;
       window.__predSummary = pred?.summary || {};
 
-      state.horizons = data.meta.horizons_ms || [];
+      // A symbol can have live predictions before it has any cockpit trades.
+      // In that case today_snapshot has no horizons, so use the prediction
+      // stream's horizons to keep Counts + PnL visible with zero values.
+      state.horizons = Array.from(new Set([
+        ...(data.meta.horizons_ms || []).map(Number),
+        ...predictionHorizons(pred),
+      ])).filter(Number.isFinite).sort((a, b) => a - b);
       state.countsByH = data.counts.by_horizon || {};
       state.contractsByH = data.contracts?.by_horizon || {};
       state.pnlByH = data.pnl.by_horizon || {};
@@ -548,6 +589,26 @@
   el.viewMode?.addEventListener("change", () => {
     state.viewMode = el.viewMode.value;
     renderCombinedTable();
+  });
+
+  el.symbolSelect?.addEventListener("change", () => {
+    // Invalidate any ES request that was already in flight.
+    state.refreshSeq += 1;
+    const nextSymbol = getSymbol();
+    state.activeSymbol = nextSymbol;
+    // Each symbol can expose a different horizon set (for example, ES HFT+IDT
+    // versus NQ IDT-only). Keep the shared checked-horizon set unchanged.
+    state.horizons = [];
+    state.countsByH = {};
+    state.contractsByH = {};
+    state.pnlByH = {};
+    state.netByH = {};
+    window.__lastPredictionData = null;
+    window.__predSummary = {};
+
+    renderHorizons();
+    renderCombinedTable();
+    refreshAll();
   });
 
   // =========================
