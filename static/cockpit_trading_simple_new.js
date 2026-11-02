@@ -1,4 +1,14 @@
 (() => {
+  function pacificTime(value = new Date()) {
+    if (!value || value === "-") return "-";
+    const d = new Date(value);
+    if (!Number.isFinite(d.getTime())) return String(value);
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23", timeZoneName: "short"
+    }).format(d);
+  }
+
 
   // =========================
   // API BASE (CRITICAL FIX)
@@ -79,7 +89,7 @@
   // LOG
   // =========================
   function log(msg) {
-    const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    const line = `[${pacificTime()}] ${msg}`;
     state.logs.push(line);
     if (state.logs.length > 200) state.logs.shift();
 
@@ -325,14 +335,14 @@
           <td>
             <strong>${feed} (Inference Stream)</strong><br>
             Source: prediction CSV<br>
-            Refresh: ${new Date().toLocaleTimeString()}
+            Refresh: ${pacificTime()}
           </td>
 
           <td>
             <strong>${feed} (${modeLabel})</strong><br>
             Run Date: ${runDate}<br>
-            First TS: ${firstTs}<br>
-            Last TS: ${lastTs}<br>
+            First TS: ${pacificTime(firstTs)}<br>
+            Last TS: ${pacificTime(lastTs)}<br>
             Rows: ${rows}
           </td>
 
@@ -559,7 +569,7 @@
         el.todayPill.textContent =
           `RUN DATE: ${data.meta.trading_date || "-"}`;
       }
-      el.tsPill.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+      el.tsPill.textContent = `Updated: ${pacificTime()}`;
 
       log("refresh OK");
 
